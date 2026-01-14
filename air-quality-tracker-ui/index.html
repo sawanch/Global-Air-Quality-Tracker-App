@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Global Air Quality Tracker - Real-time air quality monitoring across 500+ cities worldwide">
+    <title>Global Air Quality Tracker Dashboard</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- Highcharts -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="navbar-brand">
+                <i class="bi bi-globe-americas"></i> Global Air Quality Tracker
+            </span>
+            <div class="nav-buttons">
+                <a href="analytics.html" class="btn-nav">
+                    <i class="bi bi-graph-up"></i> Analytics
+                </a>
+                <button id="refresh-btn" class="btn-nav" onclick="refreshData()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+                <a id="swagger-link" href="#" target="_blank" class="btn-nav">
+                    <i class="bi bi-file-code"></i> API Docs
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Error Alert -->
+        <div id="error-alert" class="error-alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span id="error-message"></span>
+            <button type="button" class="btn-close ms-auto" onclick="closeErrorAlert()"></button>
+        </div>
+
+        <!-- Global Statistics Section -->
+        <section id="global-stats-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="bi bi-globe2"></i> Global Air Quality Statistics
+                </h2>
+                <span id="last-updated" class="last-updated">Last Updated: --</span>
+            </div>
+
+            <!-- Loading State -->
+            <div id="global-loading" class="loading-container">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading global statistics...</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div id="global-stats-cards" class="stats-grid" style="display: none;">
+                <!-- Total Cities -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <p class="stat-card-label">Total Cities</p>
+                            <p class="stat-card-value" id="total-cities">--</p>
+                        </div>
+                        <div class="stat-card-icon cities">🏙️</div>
+                    </div>
+                    <div class="stat-card-footer">
+                        <span id="total-countries">--</span> countries monitored
+                    </div>
+                </div>
+
+                <!-- Average AQI -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <p class="stat-card-label">Global Avg AQI</p>
+                            <p class="stat-card-value" id="avg-aqi">--</p>
+                        </div>
+                        <div class="stat-card-icon aqi">📊</div>
+                    </div>
+                    <div class="stat-card-footer">
+                        Air Quality Index (0-500 scale)
+                    </div>
+                </div>
+
+                <!-- Good Air Quality -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <p class="stat-card-label">Good Air Quality</p>
+                            <p class="stat-card-value aqi-good" id="cities-good">--</p>
+                        </div>
+                        <div class="stat-card-icon good">💚</div>
+                    </div>
+                    <div class="stat-card-footer">
+                        Cities with AQI 0-50
+                    </div>
+                </div>
+
+                <!-- Unhealthy Air -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <p class="stat-card-label">Unhealthy Air</p>
+                            <p class="stat-card-value aqi-unhealthy" id="cities-unhealthy">--</p>
+                        </div>
+                        <div class="stat-card-icon unhealthy">⚠️</div>
+                    </div>
+                    <div class="stat-card-footer">
+                        Cities with AQI > 100
+                    </div>
+                </div>
+
+                <!-- Cleanest City -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <p class="stat-card-label">Cleanest City</p>
+                            <p class="stat-card-value" id="cleanest-city" style="font-size: 1.5rem;">--</p>
+                        </div>
+                        <div class="stat-card-icon cleanest">🌿</div>
+                    </div>
+                    <div class="stat-card-footer">
+                        AQI: <span id="cleanest-aqi">--</span>
+                    </div>
+                </div>
+
+                <!-- Most Polluted City -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <p class="stat-card-label">Most Polluted</p>
+                            <p class="stat-card-value" id="polluted-city" style="font-size: 1.5rem;">--</p>
+                        </div>
+                        <div class="stat-card-icon polluted">🏭</div>
+                    </div>
+                    <div class="stat-card-footer">
+                        AQI: <span id="polluted-aqi">--</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section id="charts-section" class="mt-5" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="bi bi-bar-chart"></i> Air Quality Distribution
+                </h2>
+            </div>
+            
+            <div class="charts-grid">
+                <!-- AQI Distribution Chart -->
+                <div class="chart-card">
+                    <div class="chart-header blue">
+                        <i class="bi bi-pie-chart"></i> AQI Category Distribution
+                    </div>
+                    <div class="chart-body">
+                        <div id="aqi-distribution-chart" style="height: 300px;"></div>
+                    </div>
+                </div>
+
+                <!-- Top Polluted Cities Chart -->
+                <div class="chart-card">
+                    <div class="chart-header orange">
+                        <i class="bi bi-bar-chart-fill"></i> Top 10 Most Polluted Cities
+                    </div>
+                    <div class="chart-body">
+                        <div id="top-polluted-chart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Recommendations Section -->
+        <section id="ai-section" class="mt-5" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="bi bi-robot"></i> AI-Powered Recommendations
+                </h2>
+                <div>
+                    <input type="text" id="ai-city-input" class="search-input" placeholder="Enter city name..." style="width: 200px;">
+                    <button class="btn-nav" onclick="getAiRecommendations()" style="background: var(--color-sky-mid);">
+                        <i class="bi bi-sparkles"></i> Get Recommendations
+                    </button>
+                </div>
+            </div>
+            
+            <div id="ai-recommendations" class="recommendations-grid">
+                <!-- Recommendations will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- City Data Section -->
+        <section id="city-data-section" class="mt-5">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="bi bi-buildings"></i> City-wise Air Quality Data
+                </h2>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="search-input" class="search-input" placeholder="Search cities or countries..." onkeyup="filterCities()">
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="cities-loading" class="loading-container">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading city data...</p>
+            </div>
+
+            <!-- Data Table -->
+            <div id="cities-table-container" class="table-container" style="display: none;">
+                <div class="table-header">
+                    <span class="table-title">Air Quality Data</span>
+                    <span id="city-count">0 cities</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th onclick="sortTable('city')">City <i class="bi bi-chevron-expand"></i></th>
+                                <th onclick="sortTable('country')">Country <i class="bi bi-chevron-expand"></i></th>
+                                <th onclick="sortTable('aqi')" class="text-end">AQI <i class="bi bi-chevron-expand"></i></th>
+                                <th onclick="sortTable('pm25')" class="text-end">PM2.5 <i class="bi bi-chevron-expand"></i></th>
+                                <th onclick="sortTable('pm10')" class="text-end">PM10 <i class="bi bi-chevron-expand"></i></th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cities-table-body">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- No Results -->
+            <div id="no-results" class="error-alert" style="display: none;">
+                <i class="bi bi-info-circle"></i>
+                No cities found matching your search.
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Global Air Quality Tracker Dashboard &copy; 2026 | Data updated every 6 hours from OpenAQ</p>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Configuration -->
+    <script src="js/config.js"></script>
+    
+    <!-- Set Swagger URL -->
+    <script>
+        document.getElementById('swagger-link').href = CONFIG.SWAGGER_UI_URL;
+    </script>
+    
+    <!-- Main Application JS -->
+    <script src="js/app.js"></script>
+</body>
+</html>
